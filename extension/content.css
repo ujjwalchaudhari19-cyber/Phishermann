@@ -1,0 +1,4 @@
+/* Content script styles for Phishermann overlay */
+#phishermann-overlay {
+    /* Overlay styling is handled in content.js for maximum isolation */
+}

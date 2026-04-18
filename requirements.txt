@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+redis
+requests
+python-dotenv
+pydantic
+scikit-learn
+pandas
+firebase-admin

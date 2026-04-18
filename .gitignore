@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.pkl
+*.db
+
+# Environment & Secrets
+.env
+.env.local
+firebase_service_account.json
+
+# Node
+node_modules/
+dist/
+
+# ML data
+app/ml/SMSSpamCollection
+app/ml/smsspamcollection.zip
+app/ml/readme
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

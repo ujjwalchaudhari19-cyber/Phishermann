@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Phishermann</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 20px;
+      background: #050a05;
+      color: #e0ffe0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .header h1 { font-size: 1.2rem; margin: 0; color: #00ff88; }
+    .auth-status {
+      font-size: 0.8rem;
+      color: #8aaa8a;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+    }
+    .scan-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    input {
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 6px;
+      padding: 8px;
+      color: white;
+      outline: none;
+    }
+    input:focus { border-color: #00ff88; }
+    button {
+      background: #00ff88;
+      color: #001a00;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #00dd77; }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+    }
+    .result.visible { display: block; }
+    .safe { background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; color: #00ff88; }
+    .danger { background: rgba(255, 68, 68, 0.1); border: 1px solid #ff4444; color: #ff4444; }
+    .verdict-text { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
+    .score-text { font-size: 0.9rem; opacity: 0.8; }
+    .btn-logout {
+      background: transparent;
+      color: #ff4444;
+      border: 1px solid #ff4444;
+      margin-top: 10px;
+    }
+    .loader {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>🛡️</span>
+    <h1>Phishermann</h1>
+  </div>
+
+  <div id="status" class="auth-status">Checking login...</div>
+
+  <div id="auth-actions" style="display: none;">
+    <div class="scan-box">
+      <input type="text" id="url-input" placeholder="Enter URL to scan...">
+      <button id="scan-btn">Scan URL</button>
+    </div>
+
+    <div id="loader" class="loader">Scanning...</div>
+
+    <div id="result-box" class="result">
+      <div class="verdict-text" id="verdict">SAFE</div>
+      <div class="score-text" id="score">Confidence Score: 92%</div>
+    </div>
+
+    <button id="logout-btn" class="btn-logout" style="width: 100%;">Logout</button>
+  </div>
+
+  <div id="login-msg" style="display: none; text-align: center;">
+    <p>Please login via the dashboard to use the extension.</p>
+    <button onclick="window.open('http://localhost:5173/login')">Open Dashboard</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
