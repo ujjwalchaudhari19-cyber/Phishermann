@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Phishing Site Detected</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      background: rgba(10, 0, 0, 0.95);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100vh;
+      color: white; font-family: 'Inter', sans-serif;
+      text-align: center;
+    }
+    h1 { color: #ff4444; font-size: 3rem; margin-bottom: 20px; }
+    p { font-size: 1.2rem; margin-bottom: 30px; max-width: 600px; }
+    .phisher-btn {
+      padding: 15px 30px; font-size: 1rem; cursor: pointer; border: none; border-radius: 8px; margin: 10px;
+      font-weight: bold; transition: 0.2s;
+    }
+    .btn-back { background: #00ff88; color: #001a00; }
+    .btn-back:hover { background: #00dd77; transform: scale(1.05); }
+    .score-badge {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      padding: 5px 15px;
+      border-radius: 20px;
+      color: #ff4444;
+      font-weight: bold;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚠️ Phishing Site Detected</h1>
+  <div class="score-badge" id="score-badge">Threat Probability: --%</div>
+  <p><b>Blocked URL:</b> <span id="blocked-url"></span></p>
+  <p>Phishermann has blocked this site because it appears to be a phishing or scam page. Proceeding may compromise your accounts and personal data.</p>
+  <div>
+    <button class="phisher-btn btn-back" id="phisher-back">Go Back Safely</button>
+  </div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const blockedUrl = urlParams.get('url') || 'Unknown URL';
+    const score = urlParams.get('score') || 'High';
+    
+    document.getElementById('blocked-url').textContent = blockedUrl;
+    document.getElementById('score-badge').textContent = `Threat Probability: ${score}%`;
+    
+    document.getElementById("phisher-back").addEventListener("click", () => {
+      window.history.back();
+      setTimeout(() => { window.close(); }, 100);
+    });
+  </script>
+</body>
+</html>

@@ -1,22 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 import uuid
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.cache.redis_client import get_cached_url_scan, set_cached_url_scan
 from app.db.database import get_db
 from app.db.models import ScannedUrl
-from app.cache.redis_client import get_cached_url_scan, set_cached_url_scan
-from app.services.virustotal import check_virustotal
+from app.middleware.auth_middleware import verify_token
+from app.services.email_alert import send_phishing_alert
+from app.services.firebase_auth import get_firestore_client
+from app.services.heuristic import analyze_url, normalize_url
 from app.services.safebrowsing import check_safe_browsing
 from app.services.urlhaus import check_url_in_urlhaus
-from app.middleware.auth_middleware import verify_token
-from app.services.firebase_auth import get_firestore_client
+from app.services.virustotal import check_virustotal
 
 router = APIRouter()
 
 
-class UrlScanRequest(BaseModel):
+class URLRequest(BaseModel):
     url: str
 
 
@@ -29,93 +32,163 @@ class UrlScanResponse(BaseModel):
 
 
 @router.post("/url", response_model=UrlScanResponse)
-def scan_url(
-    request: UrlScanRequest,
+async def scan_url(
+    request: URLRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    token_data: dict = Depends(verify_token)
+    user: dict = Depends(verify_token)
 ):
     """
-    Scan a URL using VirusTotal, Google Safe Browsing, and URLhaus.
-    Results are cached in Redis for 1 hour. Saved to PostgreSQL + Firestore.
+    Scan URL using VirusTotal, Safe Browsing, URLhaus, and local heuristics.
+    Uses dynamic confidence weighting so unavailable external services do not
+    incorrectly force risky URLs into a safe verdict.
     """
-    target_url = request.url
-    user_id = token_data.get("uid", "anonymous")
+    raw_url = (request.url or "").strip()
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="URL cannot be empty")
 
-    # 1. Check Redis cache first (TTL: 1 hour)
-    cached = get_cached_url_scan(target_url)
+    normalized_url = normalize_url(raw_url)
+    if not normalized_url:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    user_id = user.get("uid", "anonymous")
+
+    # 1. Cache lookup uses normalized URL to avoid split cache entries.
+    cached = get_cached_url_scan(normalized_url)
     if cached:
+        cached["confidence_score"] = min(float(cached.get("confidence_score", 0)), 100.0)
         return UrlScanResponse(**cached)
 
-    # 2. Call all three external APIs concurrently (sequential for simplicity)
-    vt_result = check_virustotal(target_url)
-    sb_result = check_safe_browsing(target_url)
-    uh_result = check_url_in_urlhaus(target_url)
+    # 2. Query detection sources.
+    vt_result = check_virustotal(normalized_url)
+    sb_result = check_safe_browsing(normalized_url)
+    uh_result = check_url_in_urlhaus(normalized_url)
+    heuristic_result = analyze_url(normalized_url)
 
-    # 3. Aggregate verdict logic
-    malicious_count = vt_result.get("malicious_count", 0)
-    is_sb_threat = sb_result.get("is_threat", False)
-    is_uh_malicious = uh_result.get("is_malicious", False)
+    # 3. Convert source outputs to scores.
+    raw_malicious_count = vt_result.get("malicious_count", 0)
+    try:
+        malicious_count = int(raw_malicious_count or 0)
+    except (TypeError, ValueError):
+        malicious_count = 0
 
-    threat_signals = 0
-    if malicious_count > 3:
-        threat_signals += 2
-    elif malicious_count > 0:
-        threat_signals += 1
-    if is_sb_threat:
-        threat_signals += 2
-    if is_uh_malicious:
-        threat_signals += 1
+    if malicious_count >= 10:
+        vt_score = 100
+    elif malicious_count >= 6:
+        vt_score = 85
+    elif malicious_count >= 3:
+        vt_score = 65
+    elif malicious_count >= 1:
+        vt_score = 40
+    else:
+        vt_score = 0
 
-    if threat_signals >= 3:
+    sb_score = 100 if sb_result.get("is_threat", False) else 0
+    h_score = int(heuristic_result.get("score", 0))
+
+    critical_flags = set(heuristic_result.get("critical_flags", []))
+    has_critical_heuristic_signal = bool(critical_flags)
+
+    # URLhaus score
+    uh_score = 100 if uh_result.get("is_malicious", False) else 0
+
+    # 4. Dynamic weighted score with availability-aware weights.
+    # Heuristics are always available.
+    weighted_components = [(h_score, 0.25)]
+
+    if vt_result.get("status") == "ok":
+        weighted_components.append((vt_score, 0.35))
+
+    if sb_result.get("status") == "ok":
+        weighted_components.append((sb_score, 0.25))
+
+    if uh_result.get("url_status") != "error":
+        weighted_components.append((uh_score, 0.15))
+
+    total_weight = sum(weight for _, weight in weighted_components)
+    if total_weight == 0:
+        weighted_score = float(h_score)
+    else:
+        weighted_score = sum(score * weight for score, weight in weighted_components) / total_weight
+
+    confidence_score = round(max(0.0, min(100.0, weighted_score)), 2)
+
+    # 5. Base verdict thresholds.
+    if confidence_score >= 61:
         verdict = "phishing"
-        confidence_score = min(99.0, 60.0 + (malicious_count * 5) + (10 if is_sb_threat else 0))
-    elif threat_signals >= 1:
+    elif confidence_score >= 26:
         verdict = "suspicious"
-        confidence_score = 30.0 + (malicious_count * 5) + (10 if is_uh_malicious else 0)
     else:
         verdict = "safe"
-        confidence_score = 92.0
 
-    sources_used = [s for s, r in [("virustotal", vt_result), ("safebrowsing", sb_result), ("urlhaus", uh_result)]
-                    if r.get("status") != "error"]
+    # 6. Heuristic safety overrides for zero-day phish patterns.
+    if has_critical_heuristic_signal and h_score >= 60 and verdict == "safe":
+        verdict = "suspicious"
+        confidence_score = max(confidence_score, 45.0)
+
+    if h_score >= 85 or (has_critical_heuristic_signal and h_score >= 75):
+        verdict = "phishing"
+        confidence_score = max(confidence_score, 75.0)
+
+    # 7. Source list is strictly based on actual usable checks.
+    sources_used = ["heuristics"]
+    if vt_result.get("status") == "ok":
+        sources_used.append("virustotal")
+    if sb_result.get("status") == "ok":
+        sources_used.append("safebrowsing")
+    if uh_result.get("url_status") != "error":
+        sources_used.append("urlhaus")
 
     scan_data = {
-        "url": target_url,
+        "url": normalized_url,
         "verdict": verdict,
         "confidence_score": round(confidence_score, 2),
         "sources": sources_used,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-    # 4. Save to PostgreSQL
+    # 8. Save to local database.
     db_scan = ScannedUrl(
         id=str(uuid.uuid4()),
         user_id=user_id,
-        url=target_url,
+        url=normalized_url,
         verdict=verdict,
         confidence_score=confidence_score,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(timezone.utc),
     )
     db.add(db_scan)
     db.commit()
 
-    # 5. Save to Firestore under /users/{uid}/scans/{scan_id}
+    # 9. Save to Firestore (best effort).
     try:
         fs = get_firestore_client()
         fs.collection("users").document(user_id).collection("scans").document(db_scan.id).set({
             "type": "url",
-            "input": target_url,
+            "input": normalized_url,
             "verdict": verdict,
             "confidence_score": confidence_score,
             "sources": sources_used,
-            "timestamp": scan_data["timestamp"]
+            "timestamp": scan_data["timestamp"],
+            "heuristic_flags": heuristic_result.get("flags", []),
         })
     except Exception as e:
-        # Firestore failure should not block the response
         import logging
         logging.getLogger(__name__).error(f"Firestore write failed: {e}")
 
-    # 6. Cache in Redis (1 hour TTL)
-    set_cached_url_scan(target_url, scan_data, ttl_seconds=3600)
+    # 10. Cache response.
+    set_cached_url_scan(normalized_url, scan_data, ttl_seconds=3600)
+
+    # 11. Email alerts on risk.
+    if verdict in ["phishing", "suspicious"]:
+        user_email = user.get("email")
+        if user_email:
+            background_tasks.add_task(
+                send_phishing_alert,
+                user_email,
+                normalized_url,
+                confidence_score,
+                verdict
+            )
 
     return UrlScanResponse(**scan_data)
+

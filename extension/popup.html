@@ -59,6 +59,7 @@
     }
     .result.visible { display: block; }
     .safe { background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; color: #00ff88; }
+    .warning { background: rgba(255, 170, 0, 0.1); border: 1px solid #ffaa00; color: #ffaa00; }
     .danger { background: rgba(255, 68, 68, 0.1); border: 1px solid #ff4444; color: #ff4444; }
     .verdict-text { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
     .score-text { font-size: 0.9rem; opacity: 0.8; }
@@ -92,8 +93,8 @@
     <div id="loader" class="loader">Scanning...</div>
 
     <div id="result-box" class="result">
-      <div class="verdict-text" id="verdict">SAFE</div>
-      <div class="score-text" id="score">Confidence Score: 92%</div>
+      <div class="verdict-text" id="verdict"></div>
+      <div class="score-text" id="score"></div>
     </div>
 
     <button id="logout-btn" class="btn-logout" style="width: 100%;">Logout</button>
@@ -101,7 +102,7 @@
 
   <div id="login-msg" style="display: none; text-align: center;">
     <p>Please login via the dashboard to use the extension.</p>
-    <button onclick="window.open('http://localhost:5173/login')">Open Dashboard</button>
+    <button id="open-dashboard-btn">Open Dashboard</button>
   </div>
 
   <script src="popup.js"></script>

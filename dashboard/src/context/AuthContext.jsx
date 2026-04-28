@@ -17,9 +17,21 @@ export function AuthProvider({ children }) {
 
   // Listen to Firebase auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       setLoading(false);
+      
+      // Broadcast token to Chrome Extension if installed
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          window.postMessage({ type: "PHISHERMANN_AUTH", token, email: user.email }, "*");
+        } catch (e) {
+          console.error("Failed to sync token to extension", e);
+        }
+      } else {
+        window.postMessage({ type: "PHISHERMANN_AUTH_LOGOUT" }, "*");
+      }
     });
     return unsubscribe;
   }, []);

@@ -54,12 +54,19 @@ def get_user_history(
             for doc in docs:
                 data = doc.to_dict()
                 score = data.get("confidence_score") or data.get("scam_probability") or 0.0
+                score_val = float(score)
+                # Legacy fix: Old SMS probabilities were saved as 0.0 - 1.0. 
+                # If it's a scam/suspicious but score is <= 1.0, it must be legacy.
+                if data.get("type") == "sms" and score_val <= 1.0 and score_val > 0.0:
+                    if data.get("verdict") in ["scam", "suspicious"] or score_val < 0.1: 
+                        score_val *= 100
+
                 results.append(ScanHistoryItem(
                     scan_id=doc.id,
                     type=data.get("type", "url"),
                     input=data.get("input", ""),
                     verdict=data.get("verdict", "unknown"),
-                    score=round(float(score), 2),
+                    score=round(score_val, 2),
                     timestamp=data.get("timestamp", "")
                 ))
             return HistoryResponse(scans=results)
@@ -95,12 +102,17 @@ def get_user_history(
         .all()
     )
     for s in sms_scans:
+        score_val = float(s.scam_probability)
+        if score_val <= 1.0 and score_val > 0.0:
+            if s.verdict in ["scam", "suspicious"] or score_val < 0.1:
+                score_val *= 100
+
         results.append(ScanHistoryItem(
             scan_id=s.id,
             type="sms",
             input=s.message_text[:200],
             verdict=s.verdict,
-            score=round(s.scam_probability, 2),
+            score=round(score_val, 2),
             timestamp=s.timestamp.isoformat() if s.timestamp else ""
         ))
 

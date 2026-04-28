@@ -34,11 +34,14 @@ def scan_sms(
     Scan an SMS message using the trained ML classifier.
     Saves result to PostgreSQL and Firestore under the authenticated user's ID.
     """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
     user_id = token_data.get("uid", "anonymous")
 
     # Run ML prediction
     prediction = predict_sms(request.message)
-    scam_prob = round(float(prediction.get("scam_probability", 0.0)), 4)
+    scam_prob = round(float(prediction.get("scam_probability", 0.0)) * 100, 2)
     verdict = prediction.get("verdict", "legitimate")
 
     # Normalize unknown verdict (model not trained yet)

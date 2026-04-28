@@ -1,0 +1,213 @@
+.chat-bubble-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #00aaff;
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.chat-bubble-btn:hover {
+  transform: scale(1.1);
+}
+
+.chat-window {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  width: 350px;
+  height: 500px;
+  max-height: calc(100vh - 100px);
+  background: var(--surface, #1e1e24);
+  border: 1px solid var(--border, #2a2a35);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-header {
+  background: var(--surface-light, #2a2a35);
+  padding: 16px;
+  border-bottom: 1px solid var(--border, #3a3a4a);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text, #ffffff);
+}
+
+.chat-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #999);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.chat-close-btn:hover {
+  color: var(--text, #fff);
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--background, #121212);
+}
+
+.chat-welcome {
+  color: var(--text-muted, #999);
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.chat-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-starter-btn {
+  background: var(--surface-light, #2a2a35);
+  border: 1px solid var(--border, #3a3a4a);
+  color: var(--text, #fff);
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.chat-starter-btn:hover {
+  background: var(--border, #4a4a5a);
+}
+
+.chat-message {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.bot {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.chat-message.user .chat-bubble {
+  background: #00aaff;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.bot .chat-bubble {
+  background: var(--surface-light, #2a2a35);
+  color: var(--text, #fff);
+  border: 1px solid var(--border, #3a3a4a);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble.error {
+  border-color: #ff4444 !important;
+  color: #ff4444 !important;
+}
+
+.chat-bubble.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 40px;
+}
+
+.chat-input-area {
+  display: flex;
+  padding: 12px;
+  border-top: 1px solid var(--border, #3a3a4a);
+  background: var(--surface, #1e1e24);
+  gap: 8px;
+}
+
+.chat-input-area input {
+  flex: 1;
+  background: var(--surface-light, #2a2a35);
+  border: 1px solid var(--border, #3a3a4a);
+  color: var(--text, #fff);
+  padding: 10px 14px;
+  border-radius: 20px;
+  outline: none;
+}
+
+.chat-input-area input:focus {
+  border-color: #00aaff;
+}
+
+.chat-input-area button {
+  background: #00aaff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.chat-input-area button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+  display: block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

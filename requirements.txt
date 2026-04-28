@@ -8,3 +8,5 @@ pydantic
 scikit-learn
 pandas
 firebase-admin
+google-generativeai
+resend

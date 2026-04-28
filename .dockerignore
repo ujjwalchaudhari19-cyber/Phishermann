@@ -1,0 +1,10 @@
+.venv
+__pycache__
+.git
+.env
+.env.local
+dashboard/node_modules/
+dashboard/src/
+extension/
+phishermann_dev.db
+Make_repetitive_animation_202604231348.mp4
