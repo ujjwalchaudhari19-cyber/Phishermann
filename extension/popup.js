@@ -15,6 +15,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (firebaseToken) {
     statusEl.textContent = `Logged in as: ${userEmail}`;
     authActions.style.display = "block";
+    
+    // Auto-fetch current tab URL and trigger scan
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].url) {
+        const currentUrl = tabs[0].url;
+        urlInput.value = currentUrl;
+        
+        if (!currentUrl.startsWith("chrome://") && !currentUrl.startsWith("edge://")) {
+          scanBtn.click();
+        }
+      }
+    });
   } else {
     statusEl.textContent = "Not logged in";
     loginMsg.style.display = "block";
@@ -43,16 +55,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  const openDashboardBtn = document.getElementById("open-dashboard-btn");
+  if (openDashboardBtn) {
+    openDashboardBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: "https://phishermann.onrender.com/login" });
+    });
+  }
+
   function displayResult(data) {
     const verdictEl = document.getElementById("verdict");
     const scoreEl = document.getElementById("score");
 
     verdictEl.textContent = data.verdict.toUpperCase();
-    scoreEl.textContent = `Confidence Score: ${data.confidence_score}%`;
+    scoreEl.textContent = `Threat Probability: ${data.confidence_score}%`;
 
     resultBox.className = "result visible";
-    if (data.verdict === "phishing" || data.verdict === "suspicious") {
+    if (data.verdict === "phishing" || data.verdict === "scam") {
       resultBox.classList.add("danger");
+    } else if (data.verdict === "suspicious") {
+      resultBox.classList.add("warning");
     } else {
       resultBox.classList.add("safe");
     }

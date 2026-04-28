@@ -3,8 +3,17 @@
   "name": "Phishermann Real-time Protection",
   "version": "1.0",
   "description": "Protects you from phishing and scams in real-time.",
-  "permissions": ["activeTab", "storage", "identity", "tabs"],
-  "host_permissions": ["http://localhost:8000/*"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "identity",
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://phishermann.onrender.com/*",
+    "http://127.0.0.1:8000/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -18,9 +27,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ]
     }
   ],
   "icons": {
